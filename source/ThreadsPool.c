@@ -250,9 +250,8 @@ void worker_Fun(void* filepath){
 
     }
 
-
+    //mando il messaggio
     message.nome = filePath;
-
 
     send_message(&message);
 
