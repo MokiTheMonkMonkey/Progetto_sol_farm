@@ -208,8 +208,6 @@ void worker_Fun(void* filepath){
     FILE * fd = NULL;
     long int i,lBuf;
 
-    size_t filePathLen = strnlen(filePath , MAX_NAME) + 1;
-
     //apro il file
     if((fd = fopen (filePath , "r")) == NULL){
 
@@ -253,8 +251,7 @@ void worker_Fun(void* filepath){
     }
 
 
-    message.nome = s_malloc(filePathLen);
-    strncpy(message.nome,filePath,filePathLen);
+    message.nome = filePath;
 
 
     send_message(&message);
