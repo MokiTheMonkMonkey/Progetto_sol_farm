@@ -1,5 +1,5 @@
 CC			=  gcc
-CFLAGS		+= -pedantic -Wall -Werror -std=c99 -g
+CFLAGS		+= -pedantic -pthread -Wall -Werror -std=c99 -g
 INCLUDES	= -I ./includes
 TARGETS		= farm
 OBJS        = ./source/main.o ./source/utils.o ./source/ThreadsPool.o ./source/collector.o ./source/masterWorker.o
