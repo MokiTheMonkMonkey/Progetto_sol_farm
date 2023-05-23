@@ -85,8 +85,15 @@ void masterExitFun(){
     free(coda_concorrente.delay);
     free(coda_concorrente.workers);
 
-    NodoCoda * next = NULL;
+    while(coda_concorrente.curr != 0){
 
+        free(coda_concorrente.file_path[coda_concorrente.start]);
+        coda_concorrente.start = (coda_concorrente.start + 1) % coda_concorrente.lim;
+        coda_concorrente.curr--;
+
+    }
+    free(coda_concorrente.file_path);
+    /*
     while(coda_concorrente.coda){
 
         next = coda_concorrente.coda -> next;
@@ -95,6 +102,7 @@ void masterExitFun(){
         coda_concorrente.coda = next;
 
     }
+    */
 
 }
 
@@ -110,8 +118,7 @@ void init_coda_con(){
     coda_concorrente.delay -> tv_nsec = 0;
     coda_concorrente.lim = 0;
     coda_concorrente.curr = 0;
-    coda_concorrente.coda = NULL;
-    coda_concorrente.last = NULL;
+    coda_concorrente.file_path = NULL;
 
 }
 
@@ -120,20 +127,20 @@ void init_coda_con(){
  * */
 void set_standard_coda_con(){
 
-
     if(coda_concorrente.th_number == 0)
 
         coda_concorrente.th_number = 4;
 
     coda_concorrente.workers = s_malloc(sizeof(pthread_t) * coda_concorrente.th_number);
-
+    terMes = (int)coda_concorrente.th_number;
 
     if(coda_concorrente.lim == 0)
 
         coda_concorrente.lim = 8;
 
-    is_set_coda_con = 1;
-    terMes = coda_concorrente.th_number;
+    coda_concorrente.file_path = s_malloc(sizeof(char*) * coda_concorrente.lim);
+    coda_concorrente.start = 0;
+    coda_concorrente.last = 0;
 
 }
 
@@ -268,7 +275,7 @@ void cerca_File_Regolari( char * dirName ){
             //controllo se il file e' regolare
             if (S_ISREG(d_stat.st_mode)) {
 
-                insert_coda_con( file_name );
+                push_coda_con( file_name );
 
                 if( nanosleep( coda_concorrente.delay , NULL ) != 0 ){
 
@@ -281,7 +288,6 @@ void cerca_File_Regolari( char * dirName ){
             } else {
 
                 if ( S_ISDIR ( d_stat.st_mode ) && !signExit) {
-
 
                     cerca_File_Regolari ( file_name );
 
@@ -337,7 +343,7 @@ char * ins_file_singoli( int argc , char * argv[] , int OptInd ){
         else {
             if (S_ISREG(c_stat.st_mode) && !signExit) {
 
-                insert_coda_con(argv[OptInd++]);
+                push_coda_con(argv[OptInd++]);
 
                 if (nanosleep(coda_concorrente.delay, NULL) != 0) {
 

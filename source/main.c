@@ -7,7 +7,7 @@
 #include <getopt.h>
 
 //variabili globali
-int terMes,is_set_coda_con = 0 ,end_list = 0, no_more_files = 0,fd_sock,is_set_sock = 0;
+int terMes, no_more_files = 0,fd_sock,is_set_sock = 0;
 
 
 //maschera per i segnali
@@ -27,7 +27,8 @@ pthread_mutex_t coda_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 //condizioni per : lista messaggi e coda concorrente
 pthread_cond_t sock_cond = PTHREAD_COND_INITIALIZER;
-pthread_cond_t coda_cond = PTHREAD_COND_INITIALIZER;
+pthread_cond_t void_coda_cond = PTHREAD_COND_INITIALIZER;
+pthread_cond_t full_coda_cond = PTHREAD_COND_INITIALIZER;
 
 
 
@@ -196,7 +197,6 @@ int main (int argc , char* argv[]){
 
         }
         IS_MENO1(close(r_sock) , "close :" , return -1)
-        IS_MENO1(unlink(SOCK_NAME) , "unlink :" , return -1)
 
         printTree(B_S_Tree);
 
@@ -214,10 +214,10 @@ int main (int argc , char* argv[]){
 
     atexit(&masterExitFun);
 
-    NOT_ZERO(pthread_create(&signalH,NULL, signalHandler,NULL),"errore signal handler ")
-
-    //inizializzo ai valori standard le opzioni non scelte e mando un segnale al' thread addetto lla ricerca
+    //inizializzo ai valori standard le opzioni non scelte
     set_standard_coda_con();
+
+    NOT_ZERO(pthread_create(&signalH,NULL, signalHandler,NULL),"errore signal handler ")
 
     int e = 0;
 
@@ -249,7 +249,7 @@ int main (int argc , char* argv[]){
 
     }
 
-    insert_coda_con("quit");
+    push_coda_con("quit");
 
     for(int i = 0; i < coda_concorrente.th_number ; i++){
 

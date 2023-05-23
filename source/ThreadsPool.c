@@ -1,84 +1,57 @@
 #include <threadsPool.h>
 
-
 /*
- * funzione per inserire in coda
+ * push della coda concorrente
  * */
-int insert_coda_con(char * nomeFile){
-
+void push_coda_con(char * filePath){
 
     LOCK(&coda_mutex)
 
-    while(!is_set_coda_con && coda_concorrente.curr == coda_concorrente.lim && !signExit){
+    while(coda_concorrente.curr == coda_concorrente.lim && !signExit){
 
         //coda troppo piena aspetto che si svuoti
-        WAIT(&coda_cond,&coda_mutex)
+        WAIT(&full_coda_cond, &coda_mutex)
 
     }
 
+    /*
+     * è stato mandato un segnale che deve far terminare il programma
+     * smetto di inserire in coda
+     * */
     if(signExit){
 
         no_more_files = 1;
-        SIGNAL(&coda_cond)
+        BCAST(&void_coda_cond)
         UNLOCK(&coda_mutex)
 
-        return 0;
+        return;
 
     }
 
-    if(!coda_concorrente.coda){
-
-
-        //non ci sono nodi quindi inserisco il primo
-        coda_concorrente.coda = s_malloc(sizeof(NodoCoda));
-        size_t dim = strnlen ( nomeFile , MAX_NAME) + 1;
-        coda_concorrente.coda -> nome = s_malloc(dim);
-        strncpy(coda_concorrente.coda -> nome , nomeFile , dim);
-        coda_concorrente.coda -> next = NULL;
-        coda_concorrente.last = coda_concorrente.coda;
-
-    }
-    else{
-
-        //ci sono nodi quindi appendo all'ultimo
-        NodoCoda * nuovoNodo = NULL;
-
-        nuovoNodo = s_malloc(sizeof(NodoCoda));
-        size_t dim = strnlen ( nomeFile , MAX_NAME) + 1;
-        nuovoNodo -> nome = s_malloc(dim);
-        nuovoNodo -> next = NULL;
-        strncpy((nuovoNodo) -> nome , nomeFile ,dim);
-        coda_concorrente.last -> next = nuovoNodo;
-        coda_concorrente.last = nuovoNodo;
-
-    }
-    //aggiorno la quantità di nodi presenti
+    //inserisco il nodo in coda
+    size_t file_len = strnlen(filePath,MAX_NAME) + 1;
+    coda_concorrente.file_path[coda_concorrente.last] = s_malloc(file_len);
+    strncpy(coda_concorrente.file_path[coda_concorrente.last], filePath , file_len);
     coda_concorrente.curr++;
+    coda_concorrente.last = (coda_concorrente.last + 1) % coda_concorrente.lim;
 
-    SIGNAL(&coda_cond)
-
-    UNLOCK(&coda_mutex)
-
-    return 0;
+    //la coda non e' piu' vuota e mando il messaggio ai threads
+    SIGNAL(&void_coda_cond);
+    UNLOCK(&coda_mutex);
 
 }
-
-
 
 /*
  * pop della coda concorrente
  * */
-char * pop_Coda_Con(){
-
-    NodoCoda * coda_next = NULL;
+char * pop_coda_con(){
 
     LOCK(&coda_mutex)
-
 
     //aspetto che la coda si riempia o che arrivi il messaggio di teminazione
     while(!coda_concorrente.curr && !no_more_files){
 
-        WAIT(&coda_cond,&coda_mutex)
+        WAIT(&void_coda_cond, &coda_mutex)
 
     }
 
@@ -86,49 +59,36 @@ char * pop_Coda_Con(){
     //se il messaggio di terminazione e' arrivato ritorno null
     if(no_more_files && !coda_concorrente.curr){
 
-
-        BCAST(&coda_cond)
+        //sono finiti i file
+        BCAST(&void_coda_cond)
         UNLOCK(&coda_mutex)
         return NULL;
 
     }
 
 
+    if(!(strncmp(coda_concorrente.file_path[coda_concorrente.start],"quit",4))){
 
-    size_t dim = strnlen(coda_concorrente.coda -> nome, MAX_NAME) + 1;
-    char * fileName = s_malloc(dim);
-
-    if(--coda_concorrente.curr == 0){
-
-        (coda_concorrente.last) = NULL;
-
-    }
-    else{
-
-        coda_next = (coda_concorrente.coda) -> next;
-
-    }
-
-    strncpy(fileName,coda_concorrente.coda -> nome, dim);
-
-    free((coda_concorrente.coda) -> nome);
-    free(coda_concorrente.coda);
-
-    (coda_concorrente.coda) = coda_next;
-
-    if(!strncmp(fileName , "quit" , 4)){
-
+        //e' il messaggio di terminazione quindi dealloco e avviso gli altri threads che la coda non verra' riempita
+        free(coda_concorrente.file_path[coda_concorrente.start]);
         no_more_files = 1;
-        BCAST( &coda_cond )
+        coda_concorrente.curr--;
+        BCAST(&void_coda_cond)
         UNLOCK(&coda_mutex)
-        return fileName;
+         return NULL;
 
     }
 
-    SIGNAL( &coda_cond )
-    UNLOCK( &coda_mutex )
+    //prendo la stringa dalla coda
+    char * ret = coda_concorrente.file_path[coda_concorrente.start];
+    coda_concorrente.curr--;
+    coda_concorrente.start = (coda_concorrente.start + 1) % coda_concorrente.lim;
 
-    return fileName;
+    //avviso il master che la coda non e' piu' piena e rilascio la mutex
+    SIGNAL(&full_coda_cond)
+    UNLOCK(&coda_mutex)
+
+    return ret;
 
 }
 
@@ -144,32 +104,14 @@ void * worker(){
 
     while(1) {
 
-        if (((nomeFile = pop_Coda_Con ()) && !strncmp ( nomeFile , "quit" , 4)) ) {
+        //faccio la pop della coda concorrente
+        if(!(nomeFile = pop_coda_con())){
 
-
-
-            LOCK(&ter_mes_mutex)
-
-            terMes--;
-
-            UNLOCK(&ter_mes_mutex)
-
-            free(nomeFile);
-
-            return NULL;
-
-        }
-
-        if(!nomeFile || signExit){
-
-            if(nomeFile) {
-
-                free(nomeFile);
-                nomeFile = NULL;
-            }
+            //la coda e' finita
             LOCK(&ter_mes_mutex)
             if(terMes > 1){
 
+                //non e' l'ultimo thread quindi diminuisco terMes e termino il thread
                 terMes--;
 
                 UNLOCK(&ter_mes_mutex)
@@ -178,6 +120,7 @@ void * worker(){
 
             }else{
 
+                //e' l'ultimo thread quindi mando il messaggio di terminazione e termino il thread
                 UNLOCK(&ter_mes_mutex)
 
                 send_message(NULL);
@@ -186,10 +129,9 @@ void * worker(){
 
             }
 
-
-
         }
 
+        //calcolo il valore del file e lo mando
         worker_Fun(nomeFile);
 
     }
@@ -259,13 +201,16 @@ void worker_Fun(void* filepath){
 }
 
 /*
- * thread dedicato a scirvere messaggi sulla socket
+ * funzione per mandare messaggi sul socket
  * */
 void send_message(Mes * to_send) {
 
     size_t w_bites  =0;
     int checkPrint;
+
     LOCK(&sock_mutex)
+
+    //controllo che la connessione al socket sia avvennuta
     while(!is_set_sock){
 
         WAIT(&sock_cond, &sock_mutex)
@@ -274,36 +219,30 @@ void send_message(Mes * to_send) {
     do{
         checkPrint = printM;
 
+        //controllo che non sia arrivata una richiesta di stampa dell'albero
         if(!checkPrint) {
 
             if (to_send) {
 
                 w_bites = strnlen(to_send->nome, MAX_NAME) + 1;
 
-
+                //mando la lunghezza della stringa
                 IS_MENO1(write_n(fd_sock, &w_bites, sizeof(size_t)),"srittura numero bytes ", exit(EXIT_FAILURE))
 
-
+                //mando la stringa
                 IS_MENO1(write_n(fd_sock, to_send->nome, w_bites),"scrittura messaggio ", exit(EXIT_FAILURE))
 
-
+                //mando il valore calcolato del file
                 IS_MENO1(write_n(fd_sock, &(to_send->val), sizeof(long int)),"scrittura valore ", exit(EXIT_FAILURE))
 
-
+                //dealloco la stringa
                 free(to_send->nome);
 
             } else {
 
+                //mando il messaggio di terminazione
                 w_bites = -2;
-
                 IS_MENO1(write_n(fd_sock, &w_bites, sizeof(size_t)),"write quit ", exit(EXIT_FAILURE))
-
-                if ((errno = 0), close(fd_sock) == -1) {
-
-                    perror("socket close ");
-                    exit(EXIT_FAILURE);
-
-                }
 
                 UNLOCK(&sock_mutex)
 
@@ -315,19 +254,19 @@ void send_message(Mes * to_send) {
         }
         else{
 
-
-            IS_MENO1(write_n(fd_sock, &w_bites, sizeof(size_t)) , "write print request ", exit(EXIT_FAILURE))
-
-            printM = 0;
-
+            //mando la richiesta di stampa
             w_bites =-3;
-
+            IS_MENO1(write_n(fd_sock, &w_bites, sizeof(size_t)) , "write print request ", exit(EXIT_FAILURE))
+            //resetto la variabile di stampa
+            printM = 0;
 
         }
 
-    }while(checkPrint);
+        //controllo che non sia arrivata una richiesta di stampa
+    }while(printM);
 
     UNLOCK(&sock_mutex)
+
 
 
 }

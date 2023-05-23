@@ -31,6 +31,7 @@ void freeTree(TreeNode * cTree){
 void collectorExitFun(){
 
     freeTree(B_S_Tree);
+    IS_MENO1(unlink(SOCK_NAME) , "unlink :" , exit(EXIT_FAILURE))
 
 }
 
