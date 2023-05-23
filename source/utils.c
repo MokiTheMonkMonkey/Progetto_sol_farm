@@ -74,9 +74,8 @@ long isNumber(const char* s) {
 
 /*
  * funzione per leggere size bytes
- * anche se la write venisse interrotta da eventuali segnagli
+ * anche se la write venisse interrotta da eventuali segnali
  * */
-
 size_t read_n(long fd, void *buf, size_t size) {
     size_t left = size;
     long r;

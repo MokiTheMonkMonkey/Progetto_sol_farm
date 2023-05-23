@@ -82,9 +82,13 @@ int signalMask(){
  * */
 void masterExitFun(){
 
-    free(coda_concorrente.delay);
-    free(coda_concorrente.workers);
 
+    free(coda_concorrente.delay);
+    if(coda_concorrente.workers) {
+
+        free(coda_concorrente.workers);
+
+    }
     while(coda_concorrente.curr != 0){
 
         free(coda_concorrente.file_path[coda_concorrente.start]);
@@ -92,17 +96,10 @@ void masterExitFun(){
         coda_concorrente.curr--;
 
     }
-    free(coda_concorrente.file_path);
-    /*
-    while(coda_concorrente.coda){
+    if(coda_concorrente.file_path)
 
-        next = coda_concorrente.coda -> next;
-        free(coda_concorrente.coda -> nome);
-        free(coda_concorrente.coda);
-        coda_concorrente.coda = next;
+        free(coda_concorrente.file_path);
 
-    }
-    */
 
 }
 
@@ -113,6 +110,7 @@ void masterExitFun(){
 void init_coda_con(){
 
     coda_concorrente.th_number = 0;
+    coda_concorrente.workers = NULL;
     coda_concorrente.delay = s_malloc(sizeof(struct timespec));
     coda_concorrente.delay -> tv_sec = 0;
     coda_concorrente.delay -> tv_nsec = 0;
@@ -156,10 +154,10 @@ void master_connection(){
 
     struct sockaddr_un sa;
 
-    //imposto il tempo di attesa per riprovare la connect 1 secondo
+    //imposto il tempo di attesa per riprovare la connect 1/5 s
     struct timespec wait;
 
-    wait.tv_nsec = 50000000;
+    wait.tv_nsec = 20000000;
     wait.tv_sec = 0;
 
     sa.sun_family = AF_UNIX;
@@ -172,22 +170,25 @@ void master_connection(){
 
         if((errno = 0) , connect(fd_sock , (struct sockaddr *)&sa , 108) == 0){
 
+            //la connessione e' andata in porto, termino il ciclo
+            i = -1;
             break;
 
         }
 
-        if(errno != ENOENT){
+        if((e = errno),e != ENOENT && e != ECONNREFUSED){
 
-            e = errno;
+            fprintf(stderr,"%d\n",e);
             perror("connect ");
             exit(e);
 
         } else{
 
+            //in caso il socket non sia ancora stato creato dal collector aspetto e riprovo
             if((errno = 0),nanosleep(&wait, NULL) == -1){
 
                 e= errno;
-                perror("nanosleep del sender :");
+                perror("nanosleep della connect ");
                 exit(e);
 
             }
@@ -195,7 +196,8 @@ void master_connection(){
         }
 
     }
-    if(i==10){
+    //se alla fine dei 10 tentativi non sono riuscito a connettermi chiudo il programma
+    if(i!=-1){
 
         fprintf(stderr,"connect fallita\n");
         exit(EXIT_FAILURE);
@@ -258,6 +260,7 @@ void cerca_File_Regolari( char * dirName ){
     //finche' la cartella non è vuota,si veirfica un errore o non viene mandato il segnale SIGINT
     while( ( errno = 0 ) , (( info = readdir(dir)) != NULL && !signExit) ){
 
+        //controllo la lunghezza e genero il nuovo nome
         if( !( file_name = valid_name ( dirName , info -> d_name ) ) ){
 
             fprintf( stderr, "nome torppo lungo nella directory : %s" , dirName );
@@ -265,9 +268,9 @@ void cerca_File_Regolari( char * dirName ){
         }
         else if(stat(file_name , &d_stat) == -1){
 
-            fprintf(stderr,"errore nella stat nel file :%s",file_name);
+            fprintf(stderr,"errore nella stat nel file :%s ",file_name);
             free(file_name);
-            exit(2);
+            exit(EXIT_FAILURE);
 
         }
         else if((strncmp( info -> d_name , "." , 1) != 0) && (strncmp( info -> d_name , ".." , 2)) != 0){//controllo che non siano le cartelle "." o ".."
@@ -287,6 +290,7 @@ void cerca_File_Regolari( char * dirName ){
 
             } else {
 
+                //controllo che sia una directory e che non sia arrivato il segnale di terminazione
                 if ( S_ISDIR ( d_stat.st_mode ) && !signExit) {
 
                     cerca_File_Regolari ( file_name );
@@ -329,22 +333,27 @@ char * ins_file_singoli( int argc , char * argv[] , int OptInd ){
     struct stat c_stat;
     while( !signExit && OptInd < argc  ){
 
+        //controllo che il nome del file non sia troppo lungo
         if(strnlen(argv[OptInd],MAX_NAME) == MAX_NAME && argv[OptInd][MAX_NAME] != '\0'){
 
             fprintf( stderr , "il nome del file %s supera il limite di 255 caratteri :" , argv[OptInd++]);
 
         }
 
+        //chiamo la stat
         if( (stat(argv[OptInd] , &c_stat) ) == -1 ){
 
             fprintf( stderr, "errore nel file :%s\n" , argv[OptInd++] );
 
         }
         else {
+            //controllo che sia regolare
             if (S_ISREG(c_stat.st_mode) && !signExit) {
 
+                //e' regolare e lo metto in coda
                 push_coda_con(argv[OptInd++]);
 
+                //aspetto il delay richiesto
                 if (nanosleep(coda_concorrente.delay, NULL) != 0) {
 
                     perror("nanosleep : ");
@@ -354,6 +363,7 @@ char * ins_file_singoli( int argc , char * argv[] , int OptInd ){
 
             } else {
 
+                //non e' regolare
                 fprintf(stderr, "errore nel file :%s\n", argv[OptInd++]);
 
             }

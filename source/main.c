@@ -219,15 +219,12 @@ int main (int argc , char* argv[]){
 
     NOT_ZERO(pthread_create(&signalH,NULL, signalHandler,NULL),"errore signal handler ")
 
-    int e = 0;
-
     /*
      * faccio partire i threads prima di mettere in coda i file singoli
      * cosi' posso far farli concorrere durante l'inserimento
      * */
 
     for(int i = 0; i < coda_concorrente.th_number; i++) {
-
 
         NOT_ZERO(pthread_create(&(coda_concorrente.workers[i]), NULL, worker, NULL ) , "errore creazione worker")
 
@@ -249,45 +246,24 @@ int main (int argc , char* argv[]){
 
     }
 
+    //metto il messaggio di terminazione in coda
     push_coda_con("quit");
 
+    //faccio la join dei threads
     for(int i = 0; i < coda_concorrente.th_number ; i++){
 
-        if(pthread_join( coda_concorrente.workers[i] , NULL ) != 0){
-
-            //gestione errori e free
-            perror("join worker ");
-            return -1;
-
-        }
-
+        NOT_ZERO(pthread_join( coda_concorrente.workers[i] , NULL ),"join worker ")
 
     }
 
-    if(waitpid(pid, NULL , 0) == -1){
-
-        perror("errore nella WAIT PID :");
-        exit(e);
-
-    }
+    IS_MENO1( waitpid(pid, NULL , 0),"errore nella WAIT PID ",exit(EXIT_FAILURE))
 
     if(!signExit) {
 
-        if ((e = pthread_kill(signalH, SIGQUIT)) != 0) {
-
-            perror("kill signal handler ");
-            exit(e);
-
-        }
-
-        if (pthread_join(signalH, NULL) != 0) {
-
-            perror("join signal handler ");
-            exit(EXIT_FAILURE);
-
-        }
+        NOT_ZERO(pthread_kill(signalH, SIGQUIT),"kill signal handler ")
 
     }
+    NOT_ZERO(pthread_join(signalH, NULL),"join signal handler ")
 
     return 0;
 

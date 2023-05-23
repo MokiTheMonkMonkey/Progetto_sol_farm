@@ -140,7 +140,7 @@ void * worker(){
 }
 /*
  * funzione invocata dai threads che fa il calcolo del file
- * e inserisce in coda mesaggi
+ * e manda i messaggi al socket
  * */
 void worker_Fun(void* filepath){
 

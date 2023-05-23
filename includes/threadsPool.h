@@ -12,27 +12,25 @@
 
 extern volatile __sig_atomic_t signExit, printM;
 
-typedef struct nodoCoda{//nodo della coda concorrente
-
-    char *nome;
-    struct nodoCoda * next;
-
-}NodoCoda;
-
 typedef struct codaCon{//coda concorrente
 
+    //delay espresso in millisecondi
     struct timespec * delay;
+    //limite coda
     long lim;
+    //quantita' di file presenti in coda
     long curr;
+    //inizio coda
     long start;
+    //fine coda
     long last;
+    //numero di thread massimi
     long th_number;
+    //threads
     pthread_t *workers;
+    //coda limitata (rappresentata con un vettore di stringhe)
     char ** file_path;
-    /*
-    NodoCoda * last;
-    NodoCoda * coda;
-    */
+
 }CodaCon;
 
 //variabili condivise
