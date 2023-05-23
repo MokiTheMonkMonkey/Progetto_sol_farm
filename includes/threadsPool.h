@@ -56,7 +56,6 @@ void * worker();
 
 void worker_Fun(void* filepath);
 
-void master_connection();
 
 void send_message(Mes * to_send);
 

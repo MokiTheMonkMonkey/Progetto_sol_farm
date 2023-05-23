@@ -26,12 +26,12 @@ void *signalHandler(){
             case SIGINT:
             case SIGQUIT:
             case SIGTERM:
-
+                //cambio il flag che impedisce l'inserimento di nuovi elementi in coda
                 signExit = 1;
                 pthread_exit(NULL);
 
             case SIGUSR1:
-
+                //cambio il flag che manda una richiesta di stampa al collector
                 printM =1;
                 break;
 
@@ -49,16 +49,15 @@ void *signalHandler(){
  * */
 int signalMask(){
 
+    //inizializzo sa e gli associo SIG_IGN
     struct sigaction sa;
     memset(&sa, 0, sizeof(sa));
     sa.sa_handler = SIG_IGN;
 
     //ignoro il SIGPIPE
-    if(sigaction(SIGPIPE,&sa, NULL) == -1) {
-        perror("[MASTERWORKER] sigaction SIGPIPE");
-        return -1;
-    }
+    IS_MENO1(sigaction(SIGPIPE,&sa, NULL),"sigaction SIGPIPE",exit(EXIT_FAILURE))
 
+    //inizializzo la maschera e inserisco i segnali da mascherare
     sigemptyset(&mask);
     NOT_ZERO(sigaddset(&mask, SIGHUP),"sigaddset ")   // aggiunto SIGHUP alla maschera
     NOT_ZERO(sigaddset(&mask, SIGINT),"sigaddset ")   // aggiunto SIGINT alla maschera
@@ -66,12 +65,7 @@ int signalMask(){
     NOT_ZERO(sigaddset(&mask, SIGTERM),"sigaddset ")  // aggiunto SIGTERM alla maschera
     NOT_ZERO(sigaddset(&mask, SIGUSR1),"sigaddset ")  // aggiunto SIGUSR1 alla maschera
     //maschero i segnali
-    if(pthread_sigmask(SIG_BLOCK, &mask, NULL) != 0) {
-
-        perror("[MASTERWORKER] pthread_sigmask");
-        return -1;
-
-    }
+    NOT_ZERO(pthread_sigmask(SIG_BLOCK, &mask, NULL) ,"pthread_sigmask ")
 
     return 0;
 
@@ -79,6 +73,7 @@ int signalMask(){
 
 /*
  * funzione di terminazione del master
+ * dealloca tutti i possibili file rimanenti
  * */
 void masterExitFun(){
 
@@ -257,7 +252,7 @@ void cerca_File_Regolari( char * dirName ){
     struct dirent * info;
     char * file_name = NULL;
 
-    //finche' la cartella non è vuota,si veirfica un errore o non viene mandato il segnale SIGINT
+    //finche' la cartella non è vuota,si veirfica un errore o non viene mandato un segnale di terminazione
     while( ( errno = 0 ) , (( info = readdir(dir)) != NULL && !signExit) ){
 
         //controllo la lunghezza e genero il nuovo nome
@@ -280,12 +275,7 @@ void cerca_File_Regolari( char * dirName ){
 
                 push_coda_con( file_name );
 
-                if( nanosleep( coda_concorrente.delay , NULL ) != 0 ){
-
-                    perror ("nanosleep :");
-                    exit ( EXIT_FAILURE );
-
-                }
+                NOT_ZERO( nanosleep( coda_concorrente.delay , NULL ),"nanosleep ")
 
 
             } else {
@@ -293,11 +283,12 @@ void cerca_File_Regolari( char * dirName ){
                 //controllo che sia una directory e che non sia arrivato il segnale di terminazione
                 if ( S_ISDIR ( d_stat.st_mode ) && !signExit) {
 
+                    //chiamo la funzione risorisvamente
                     cerca_File_Regolari ( file_name );
 
                 }
                 else{
-
+                    //non e' una directory
                     if(!signExit)
 
                         fprintf(stderr , "nella cartella %s torvato file non regolare :%s\n" , dirName , file_name);
@@ -310,17 +301,13 @@ void cerca_File_Regolari( char * dirName ){
 
         }
 
+        //libero il nome
         free(file_name);
 
     }
 
     errno = 0;
-    if(closedir( dir ) != 0 ) {
-
-        perror("closedir :");
-        exit(errno);
-
-    }
+    NOT_ZERO(closedir( dir ),"closedir :")
 
 }
 
@@ -331,6 +318,7 @@ char * ins_file_singoli( int argc , char * argv[] , int OptInd ){
 
 
     struct stat c_stat;
+    //inserisco i file in coda concorrente finche' non finisce argv o non arriva un segnale
     while( !signExit && OptInd < argc  ){
 
         //controllo che il nome del file non sia troppo lungo
@@ -354,12 +342,7 @@ char * ins_file_singoli( int argc , char * argv[] , int OptInd ){
                 push_coda_con(argv[OptInd++]);
 
                 //aspetto il delay richiesto
-                if (nanosleep(coda_concorrente.delay, NULL) != 0) {
-
-                    perror("nanosleep : ");
-                    exit(EXIT_FAILURE);
-
-                }
+                NOT_ZERO(nanosleep(coda_concorrente.delay, NULL),"nanosleep ")
 
             } else {
 
@@ -374,4 +357,3 @@ char * ins_file_singoli( int argc , char * argv[] , int OptInd ){
     return NULL;
 
 }
-

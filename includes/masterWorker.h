@@ -3,13 +3,11 @@
 
 #include <util.h>
 #include <threadsPool.h>
-#include "./threadsPool.h"
 #include <signal.h>
 #include <dirent.h>
 
 extern sigset_t mask;
 
-extern int fd_sock;
 
 void cerca_File_Regolari( char * dirName );
 
@@ -24,7 +22,6 @@ void masterExitFun();
 void init_coda_con();
 
 void set_standard_coda_con();
-
 
 void master_connection();
 

@@ -34,9 +34,11 @@ pthread_cond_t full_coda_cond = PTHREAD_COND_INITIALIZER;
 
 int main (int argc , char* argv[]){
 
+    //non sono presenti argomenti
     if(argc < 2){
 
-        perror("inserire argomenti :");
+        fprintf(stderr,"inserire argomenti\n");
+        tutorial()
         exit(1);
 
     }
@@ -147,7 +149,10 @@ int main (int argc , char* argv[]){
         int r_sock;
         size_t r_bites = 0;
         Mes message;
+        message.val = 0;
+        message.nome = NULL;
 
+        //creo il socket da parte del collector
         r_sock = sock_create();
 
 
@@ -209,7 +214,6 @@ int main (int argc , char* argv[]){
      * master Worker
      * */
 
-
     pthread_t signalH;
 
     atexit(&masterExitFun);
@@ -217,21 +221,23 @@ int main (int argc , char* argv[]){
     //inizializzo ai valori standard le opzioni non scelte
     set_standard_coda_con();
 
+    //lancio il signal handler
     NOT_ZERO(pthread_create(&signalH,NULL, signalHandler,NULL),"errore signal handler ")
 
     /*
      * faccio partire i threads prima di mettere in coda i file singoli
      * cosi' posso far farli concorrere durante l'inserimento
      * */
-
     for(int i = 0; i < coda_concorrente.th_number; i++) {
 
         NOT_ZERO(pthread_create(&(coda_concorrente.workers[i]), NULL, worker, NULL ) , "errore creazione worker")
 
     }
 
+    //connetto il master al socket
     master_connection();
 
+    //inserisco i file da argv se ce ne sono
     if(optind != argc){
 
         ins_file_singoli( argc , argv , optind );

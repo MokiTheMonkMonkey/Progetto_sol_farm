@@ -263,7 +263,7 @@ void send_message(Mes * to_send) {
         }
 
         //controllo che non sia arrivata una richiesta di stampa
-    }while(printM);
+    }while(checkPrint);
 
     UNLOCK(&sock_mutex)
 

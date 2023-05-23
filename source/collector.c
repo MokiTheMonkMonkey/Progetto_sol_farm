@@ -1,7 +1,7 @@
 #include <collector.h>
 
 /*
- * funzione che deallocare albero
+ * funzione che dealloca l' albero
  * */
 void freeTree(TreeNode * cTree){
 
@@ -46,7 +46,6 @@ int sock_create(){
     struct sockaddr_un sa;
 
     IS_MENO1(fd_sock = socket(AF_UNIX , SOCK_STREAM , 0 ) , "errore creazione socket :" , exit(EXIT_FAILURE) )
-
 
     memset(&sa, '\0' , sizeof(sa));
 
@@ -100,6 +99,7 @@ void insTree(Mes nodoIns,TreeNode ** cTree) {
 
 /*
  * funzione per stampare l'albero corrente
+ * con una visita sinistra
  * */
 void printTree (TreeNode * cTree){
 

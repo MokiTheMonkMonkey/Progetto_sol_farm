@@ -77,20 +77,28 @@ long isNumber(const char* s) {
  * anche se la write venisse interrotta da eventuali segnali
  * */
 size_t read_n(long fd, void *buf, size_t size) {
+
     size_t left = size;
     long r;
+    //casto il buffer a char per garantire che le operazioni su puntatori siano da 1 byte
     char *bufptr = (char*)buf;
 
     while(left > 0) {
+
         if( (r=read((int)fd, bufptr, left)) == -1) {
+
             if (errno == EINTR)
                 continue;
+
             return -1;
+
         }
         if (r == 0)
+
             return 0;   // EOF
-        left    -= r;
-        bufptr  += r;
+
+        left -= r;
+        bufptr += r;
     }
     return size;
 }
@@ -122,4 +130,5 @@ size_t write_n(int fd, void *buf, size_t size) {
 
     }
     return 1;
+
 }
