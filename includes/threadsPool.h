@@ -56,11 +56,14 @@ void * worker();
 
 void worker_Fun(void* filepath);
 
-
 void send_message(Mes * to_send);
 
 void push_coda_con(char * filePath);
 
 char * pop_coda_con();
+
+void init_coda_con();
+
+void set_standard_coda_con();
 
 #endif

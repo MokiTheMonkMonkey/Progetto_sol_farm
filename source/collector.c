@@ -1,5 +1,32 @@
 #include <collector.h>
 
+
+/*
+ * creazione della socket dalla parte del collector
+ * */
+int sock_create(){
+
+    int fd_sock , cfd;
+
+    struct sockaddr_un sa;
+
+    IS_MENO1(fd_sock = socket(AF_UNIX , SOCK_STREAM , 0 ) , "errore creazione socket :" , exit(EXIT_FAILURE) )
+
+    memset(&sa, '\0' , sizeof(sa));
+
+    strncpy( sa.sun_path , SOCK_NAME , SOCK_NAME_LEN );
+    sa.sun_family = AF_UNIX;
+
+    IS_MENO1 (bind(fd_sock , (struct sockaddr *) &sa , sizeof(sa)) , "errore bind :" , exit(EXIT_FAILURE) )
+
+    IS_MENO1 (listen (fd_sock , SOMAXCONN) , "errore listen :", exit(EXIT_FAILURE) )
+
+    IS_MENO1 (cfd = accept (fd_sock , 0 , NULL ) , "errore accept :" , exit(EXIT_FAILURE))
+
+    return cfd;
+
+}
+
 /*
  * funzione che dealloca l' albero
  * */
@@ -32,33 +59,6 @@ void collectorExitFun(){
 
     freeTree(B_S_Tree);
     IS_MENO1(unlink(SOCK_NAME) , "unlink :" , exit(EXIT_FAILURE))
-
-}
-
-
-/*
- * creazione della socket dalla parte del collector
- * */
-int sock_create(){
-
-    int fd_sock , cfd;
-
-    struct sockaddr_un sa;
-
-    IS_MENO1(fd_sock = socket(AF_UNIX , SOCK_STREAM , 0 ) , "errore creazione socket :" , exit(EXIT_FAILURE) )
-
-    memset(&sa, '\0' , sizeof(sa));
-
-    strncpy( sa.sun_path , SOCK_NAME , SOCK_NAME_LEN );
-    sa.sun_family = AF_UNIX;
-
-    IS_MENO1 (bind(fd_sock , (struct sockaddr *) &sa , sizeof(sa)) , "errore bind :" , exit(EXIT_FAILURE) )
-
-    IS_MENO1 (listen (fd_sock , SOMAXCONN) , "errore listen :", exit(EXIT_FAILURE) )
-
-    IS_MENO1 (cfd = accept (fd_sock , 0 , NULL ) , "errore accept :" , exit(EXIT_FAILURE))
-
-    return cfd;
 
 }
 

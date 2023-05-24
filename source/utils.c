@@ -4,12 +4,12 @@
  * funzione che concatena due stringhe se e solo se
  * la loro lunghezza sommata non supera il limite massimo [MAX_NAME]
  * */
-char * valid_name(char * dirname , char * next){
+char * valid_name(char * dir_name , char * file_name){
 
     size_t len1,len2;
 
-    len1 = strnlen(dirname , MAX_NAME);
-    len2 = strnlen(next , MAX_NAME);
+    len1 = strnlen(dir_name , MAX_NAME);
+    len2 = strnlen(file_name , MAX_NAME);
 
     char * str_ret = NULL;
 
@@ -19,10 +19,10 @@ char * valid_name(char * dirname , char * next){
 
     str_ret = s_malloc(len1 + len2 + 2);
 
-    strncpy( str_ret , dirname , len1);
+    strncpy(str_ret , dir_name , len1);
     str_ret[len1] = '/';
     str_ret[len1 +1] = '\0';
-    str_ret = strncat( str_ret , next , len1 + len2 + 2);
+    str_ret = strncat(str_ret , file_name , len1 + len2 + 2);
 
     return str_ret;
 

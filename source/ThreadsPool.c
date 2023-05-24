@@ -1,5 +1,45 @@
 #include <threadsPool.h>
 
+
+
+/*
+ * inizializzazione coda concorrente
+ * */
+void init_coda_con(){
+
+    coda_concorrente.th_number = 0;
+    coda_concorrente.workers = NULL;
+    coda_concorrente.delay = s_malloc(sizeof(struct timespec));
+    coda_concorrente.delay -> tv_sec = 0;
+    coda_concorrente.delay -> tv_nsec = 0;
+    coda_concorrente.lim = 0;
+    coda_concorrente.curr = 0;
+    coda_concorrente.file_path = NULL;
+
+}
+
+/*
+ * funzione che setta allo standard tutte le statistiche che non sono state settate
+ * */
+void set_standard_coda_con(){
+
+    if(coda_concorrente.th_number == 0)
+
+        coda_concorrente.th_number = 4;
+
+    coda_concorrente.workers = s_malloc(sizeof(pthread_t) * coda_concorrente.th_number);
+    terMes = (int)coda_concorrente.th_number;
+
+    if(coda_concorrente.lim == 0)
+
+        coda_concorrente.lim = 8;
+
+    coda_concorrente.file_path = s_malloc(sizeof(char*) * coda_concorrente.lim);
+    coda_concorrente.start = 0;
+    coda_concorrente.last = 0;
+
+}
+
 /*
  * push della coda concorrente
  * */

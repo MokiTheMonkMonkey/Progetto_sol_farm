@@ -98,7 +98,7 @@ typedef struct mes {
 }Mes;
 
 
-char * valid_name (char * dirname , char * next);
+char * valid_name (char * dir_name , char * file_name);
 
 void* s_malloc (unsigned long size);
 

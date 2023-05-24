@@ -19,10 +19,6 @@ int signalMask();
 
 void masterExitFun();
 
-void init_coda_con();
-
-void set_standard_coda_con();
-
 void master_connection();
 
 #endif
